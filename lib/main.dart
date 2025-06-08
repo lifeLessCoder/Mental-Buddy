@@ -48,11 +48,14 @@ class Habit {
 
 class _MyHomePageState extends State<MyHomePage> {
   final Set<Habit> essentialsHabitSet = [
+    'Sleep 7-8 hrs',
+    'Take Meds',
+    'Water - 2L',
+    'Food 5 times',
+    'Exercise - 30 mins',
+    'Meditate - 30 mins',
     'Brush',
-    'Exercise',
-    'Meditate',
-    'Water',
-    'Food',
+    'Shower',
   ].map((habit) => Habit(title: habit)).toSet();
 
   @override
