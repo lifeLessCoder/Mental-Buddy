@@ -3,8 +3,9 @@ name: Build and Deploy Flutter App
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  
 
 jobs:
   build-windows:
@@ -22,7 +23,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: build/windows/runner/Release/
+          path: build/windows/x64/runner/Release/
 
   build-android:
     runs-on: ubuntu-latest
