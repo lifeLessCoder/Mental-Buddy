@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  Hive.registerAdapter(HabitAdapter());
+  await Hive.openBox<Habit>('essentialsHabits');
   runApp(const MyApp());
 }
 
@@ -39,24 +44,59 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class Habit {
+@HiveType(typeId: 0)
+class Habit extends HiveObject {
+  @HiveField(0)
   final String title;
+  @HiveField(1)
   bool done = false;
 
   Habit({required this.title});
+
+  // Hive serialization
+  Habit.fromJson(Map<String, dynamic> json)
+      : title = json['title'],
+        done = json['done'] ?? false;
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'done': done,
+      };
+}
+
+class HabitAdapter extends TypeAdapter<Habit> {
+  @override
+  final int typeId = 0;
+
+  @override
+  Habit read(BinaryReader reader) {
+    final map = Map<String, dynamic>.from(reader.readMap());
+    return Habit.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, Habit obj) {
+    writer.writeMap(obj.toJson());
+  }
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final Set<Habit> essentialsHabitSet = [
-    'Sleep 7-8 hrs',
-    'Take Meds',
-    'Water - 2L',
-    'Food 5 times',
-    'Exercise - 30 mins',
-    'Meditate - 30 mins',
-    'Brush',
-    'Shower',
-  ].map((habit) => Habit(title: habit)).toSet();
+  late Box<Habit> _habitBox;
+  final TextEditingController _habitController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _habitBox = Hive.box<Habit>('essentialsHabits');
+  }
+
+  @override
+  void dispose() {
+    _habitController.dispose();
+    super.dispose();
+  }
+
+  List<Habit> get essentialsHabitList => _habitBox.values.toList();
 
   @override
   Widget build(BuildContext context) {
@@ -98,25 +138,96 @@ class _MyHomePageState extends State<MyHomePage> {
                   elevation: 8,
                   borderRadius: BorderRadius.circular(8),
                   type: MaterialType.card,
-                  child: ListView(
-                    children: essentialsHabitSet
-                        .map(
-                          (habit) => CheckboxListTile(
-                            value: habit.done,
-                            title: Text(habit.title),
-                            selected: habit.done,
-                            onChanged: (value) {
-                              setState(() {
-                                habit.done = value ?? false;
-                              });
-                            },
-                          ),
-                        )
-                        .toList(),
+                  child: ValueListenableBuilder(
+                    valueListenable: _habitBox.listenable(),
+                    builder: (context, Box<Habit> box, _) {
+                      final habits = box.values.toList();
+                      // Sort: unchecked first, then checked
+                      habits.sort((a, b) {
+                        if (a.done == b.done) return 0;
+                        return a.done ? 1 : -1;
+                      });
+                      return ListView(
+                        children: habits
+                            .map(
+                              (habit) => CheckboxListTile(
+                                value: habit.done,
+                                title: Text(
+                                  habit.title,
+                                  style: TextStyle(
+                                    decoration: habit.done
+                                        ? TextDecoration.lineThrough
+                                        : TextDecoration.none,
+                                    color: habit.done
+                                        ? Colors.grey.withAlpha((0.75 * 255).toInt())
+                                        : null,
+                                  ),
+                                ),
+                                selected: habit.done,
+                                onChanged: (value) {
+                                  habit.done = value ?? false;
+                                  habit.save();
+                                },
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final newHabit = await showDialog<String>(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text('Add New Habit'),
+                content: TextField(
+                  controller: _habitController,
+                  autofocus: true,
+                  decoration: InputDecoration(hintText: 'Enter habit name'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final text = _habitController.text.trim();
+                      Navigator.of(context).pop(text.isNotEmpty ? text : null);
+                    },
+                    child: Text('Add'),
+                  ),
+                ],
+              );
+            },
+          );
+          if (newHabit != null && newHabit.isNotEmpty) {
+            _habitBox.add(Habit(title: newHabit));
+            _habitController.clear();
+          } else {
+            _habitController.clear();
+          }
+        },
+        child: Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: CircularNotchedRectangle(),
+        notchMargin: 6.0,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            IconButton(icon: Icon(Icons.menu), onPressed: () {}),
+            IconButton(icon: Icon(Icons.search), onPressed: () {}),
           ],
         ),
       ),
