@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:image_picker/image_picker.dart';
+import '../models/user.dart';
+import '../widgets/profile_avatar.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 
-class DrawerMenu extends StatelessWidget {
+class DrawerMenu extends StatefulWidget {
   final Function(Color) onThemeColorChanged;
   final Function(bool) onDarkModeChanged;
 
@@ -13,29 +17,55 @@ class DrawerMenu extends StatelessWidget {
   });
 
   @override
+  State<DrawerMenu> createState() => _DrawerMenuState();
+}
+
+class _DrawerMenuState extends State<DrawerMenu> {
+  late Box<User> _userBox;
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _userBox = Hive.box<User>('userBox');
+    _user = _userBox.get('user') ?? User(name: 'User Name');
+    if (_userBox.get('user') == null) {
+      _userBox.put('user', _user!);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _user = _user!..profileImage = bytes;
+        _userBox.put('user', _user!);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
-            child: const Column(
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
+                ProfileAvatar(
+                  imageBytes: _user?.profileImage,
                   radius: 40,
-                  child: Icon(Icons.face, size: 40),
+                  onTap: _pickImage,
                 ),
-                SizedBox(height: 10),
-                Text(
+                const SizedBox(height: 10),
+                const Text(
                   'Mental Buddy',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
               ],
             ),
@@ -60,8 +90,8 @@ class DrawerMenu extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => SettingsScreen(
-                    onThemeColorChanged: onThemeColorChanged,
-                    onDarkModeChanged: onDarkModeChanged,
+                    onThemeColorChanged: widget.onThemeColorChanged,
+                    onDarkModeChanged: widget.onDarkModeChanged,
                   ),
                 ),
               );

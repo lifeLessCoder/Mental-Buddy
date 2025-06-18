@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/drawer_menu.dart';
+import 'models/user.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(HabitAdapter());
+  Hive.registerAdapter(UserAdapter());
   await Hive.openBox<Habit>('essentialsHabits');
+  await Hive.openBox<User>('userBox');
   runApp(const MyApp());
 }
 
@@ -260,7 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
+        shape: CircularNotchedRectangle(), 
         notchMargin: 6.0,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
