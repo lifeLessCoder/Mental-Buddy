@@ -2,9 +2,11 @@ name: Build and Deploy Flutter App
 
 on:
   push:
-    branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+    # branches: [ main ]
+    tags:
+      - 'v*.*.*-*'
+    # pull_request:
+    #   branches: [ main ]
   
 
 jobs:
