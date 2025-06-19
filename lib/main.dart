@@ -1,88 +1,129 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/drawer_menu.dart';
+import 'models/user.dart';
+import 'models/habit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(HabitAdapter());
+  Hive.registerAdapter(UserAdapter());
   await Hive.openBox<Habit>('essentialsHabits');
+  await Hive.openBox<User>('userBox');
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Color _themeColor = Colors.cyan;
+  bool _isDarkMode = false;
+  late SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _themeColor = Color(_prefs.getInt('themeColor') ?? Colors.cyan.value);
+      _isDarkMode = _prefs.getBool('isDarkMode') ?? false;
+    });
+  }
+
+  void _handleThemeColorChanged(Color color) {
+    setState(() => _themeColor = color);
+  }
+
+  void _handleDarkModeChanged(bool isDarkMode) {
+    setState(() => _isDarkMode = isDarkMode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Mental budddy',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _themeColor,
+          brightness: _isDarkMode ? Brightness.dark : Brightness.light,
+        ),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Mental Buddy'),
+      home: MyHomePage(
+        title: 'Mental Buddy',
+        onThemeColorChanged: _handleThemeColorChanged,
+        onDarkModeChanged: _handleDarkModeChanged,
+      ),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.onThemeColorChanged,
+    required this.onDarkModeChanged,
+  });
 
   final String title;
+  final Function(Color) onThemeColorChanged;
+  final Function(bool) onDarkModeChanged;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-@HiveType(typeId: 0)
-class Habit extends HiveObject {
-  @HiveField(0)
-  final String title;
-  @HiveField(1)
-  bool done = false;
+// @HiveType(typeId: 0)
+// class Habit extends HiveObject {
+//   @HiveField(0)
+//   final String title;
+//   @HiveField(1)
+//   bool done = false;
 
-  Habit({required this.title});
+//   Habit({required this.title});
 
-  // Hive serialization
-  Habit.fromJson(Map<String, dynamic> json)
-      : title = json['title'],
-        done = json['done'] ?? false;
+//   // Hive serialization
+//   Habit.fromJson(Map<String, dynamic> json)
+//     : title = json['title'],
+//       done = json['done'] ?? false;
 
-  Map<String, dynamic> toJson() => {
-        'title': title,
-        'done': done,
-      };
-}
+//   Map<String, dynamic> toJson() => {'title': title, 'done': done};
+// }
 
-class HabitAdapter extends TypeAdapter<Habit> {
-  @override
-  final int typeId = 0;
+// class HabitAdapter extends TypeAdapter<Habit> {
+//   @override
+//   final int typeId = 0;
 
-  @override
-  Habit read(BinaryReader reader) {
-    final map = Map<String, dynamic>.from(reader.readMap());
-    return Habit.fromJson(map);
-  }
+//   @override
+//   Habit read(BinaryReader reader) {
+//     final map = Map<String, dynamic>.from(reader.readMap());
+//     return Habit.fromJson(map);
+//   }
 
-  @override
-  void write(BinaryWriter writer, Habit obj) {
-    writer.writeMap(obj.toJson());
-  }
-}
+//   @override
+//   void write(BinaryWriter writer, Habit obj) {
+//     writer.writeMap(obj.toJson());
+//   }
+// }
 
 class _MyHomePageState extends State<MyHomePage> {
   late Box<Habit> _habitBox;
   final TextEditingController _habitController = TextEditingController();
+  static final GlobalKey<ScaffoldState> _scaffoldKey =
+      GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -101,6 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         leading: Icon(Icons.hail_rounded),
         actions: [
@@ -122,7 +164,6 @@ class _MyHomePageState extends State<MyHomePage> {
             Material(
               elevation: 4,
               child: Row(
-                // mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.anchor, size: 48),
@@ -159,7 +200,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                         ? TextDecoration.lineThrough
                                         : TextDecoration.none,
                                     color: habit.done
-                                        ? Colors.grey.withAlpha((0.75 * 255).toInt())
+                                        ? Colors.grey.withAlpha(
+                                            (0.75 * 255).toInt(),
+                                          )
                                         : null,
                                   ),
                                 ),
@@ -221,15 +264,24 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
+        shape: CircularNotchedRectangle(), 
         notchMargin: 6.0,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            IconButton(icon: Icon(Icons.menu), onPressed: () {}),
+            IconButton(
+              icon: Icon(Icons.menu),
+              onPressed: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
+            ),
             IconButton(icon: Icon(Icons.search), onPressed: () {}),
           ],
         ),
+      ),
+      drawer: DrawerMenu(
+        onThemeColorChanged: widget.onThemeColorChanged,
+        onDarkModeChanged: widget.onDarkModeChanged,
       ),
     );
   }
