@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/drawer_menu.dart';
 import 'models/user.dart';
+import 'models/habit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,38 +86,38 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-@HiveType(typeId: 0)
-class Habit extends HiveObject {
-  @HiveField(0)
-  final String title;
-  @HiveField(1)
-  bool done = false;
+// @HiveType(typeId: 0)
+// class Habit extends HiveObject {
+//   @HiveField(0)
+//   final String title;
+//   @HiveField(1)
+//   bool done = false;
 
-  Habit({required this.title});
+//   Habit({required this.title});
 
-  // Hive serialization
-  Habit.fromJson(Map<String, dynamic> json)
-    : title = json['title'],
-      done = json['done'] ?? false;
+//   // Hive serialization
+//   Habit.fromJson(Map<String, dynamic> json)
+//     : title = json['title'],
+//       done = json['done'] ?? false;
 
-  Map<String, dynamic> toJson() => {'title': title, 'done': done};
-}
+//   Map<String, dynamic> toJson() => {'title': title, 'done': done};
+// }
 
-class HabitAdapter extends TypeAdapter<Habit> {
-  @override
-  final int typeId = 0;
+// class HabitAdapter extends TypeAdapter<Habit> {
+//   @override
+//   final int typeId = 0;
 
-  @override
-  Habit read(BinaryReader reader) {
-    final map = Map<String, dynamic>.from(reader.readMap());
-    return Habit.fromJson(map);
-  }
+//   @override
+//   Habit read(BinaryReader reader) {
+//     final map = Map<String, dynamic>.from(reader.readMap());
+//     return Habit.fromJson(map);
+//   }
 
-  @override
-  void write(BinaryWriter writer, Habit obj) {
-    writer.writeMap(obj.toJson());
-  }
-}
+//   @override
+//   void write(BinaryWriter writer, Habit obj) {
+//     writer.writeMap(obj.toJson());
+//   }
+// }
 
 class _MyHomePageState extends State<MyHomePage> {
   late Box<Habit> _habitBox;
