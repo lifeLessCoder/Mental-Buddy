@@ -3,7 +3,6 @@ import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user.dart';
 import '../widgets/profile_avatar.dart';
-import 'dart:typed_data';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

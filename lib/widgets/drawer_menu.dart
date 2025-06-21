@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user.dart';
-import '../widgets/profile_avatar.dart';
-import 'profile_screen.dart';
-import 'settings_screen.dart';
+import 'profile_avatar.dart';
+import '../screens/profile_screen.dart';
+import '../screens/settings_screen.dart';
 
 class DrawerMenu extends StatefulWidget {
   final Function(Color) onThemeColorChanged;
