@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:animations/animations.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mental_buddy/models/habit.dart';
@@ -51,9 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.anchor),
             onPressed: () => print('Essentials Action button pressed'),
           ),
-          IconButton(
-            icon: Icon(Icons.emoji_emotions),
-            onPressed: () => print('Pleasurables Action button pressed'),
+          OpenContainer(
+            transitionDuration: Duration(milliseconds: 300),
+            transitionType: ContainerTransitionType.fadeThrough,
+            closedColor: Colors.transparent,
+            closedElevation: 0,
+            openColor: Colors.transparent,
+            closedBuilder: (context, openContainer) {
+              return IconButton(
+                icon: Icon(Icons.emoji_emotions),
+                onPressed: openContainer,
+              );
+            },
+            openBuilder: (context, closeContainer) =>
+                _getAffirmationDialog(closeContainer),
           ),
         ],
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -94,17 +109,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             .map(
                               (habit) => Dismissible(
                                 key: ValueKey(habit.key),
-                                direction: DismissDirection.endToStart,
+                                direction: DismissDirection.startToEnd,
                                 background: Container(
                                   color: Colors.red,
                                   alignment: Alignment.centerRight,
                                   padding: EdgeInsets.symmetric(horizontal: 24),
-                                  child: Icon(Icons.delete, color: Colors.white),
+                                  child: Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
                                 ),
                                 onDismissed: (direction) {
+                                  final String habitTitle = habit.title;
                                   habit.delete();
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Habit deleted')),
+                                    SnackBar(
+                                      content: Text(
+                                        'Item "$habitTitle" deleted',
+                                      ),
+                                    ),
                                   );
                                 },
                                 child: CheckboxListTile(
@@ -127,15 +150,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                     habit.done = value ?? false;
                                     habit.save();
                                   },
-                                  secondary: IconButton(
-                                    icon: Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () async {
-                                      await habit.delete();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Habit deleted')),
-                                      );
-                                    },
-                                  ),
+                                  secondary:
+                                      ((!kIsWeb &&
+                                              (Platform.isAndroid ||
+                                                  Platform.isIOS)) ||
+                                          (kIsWeb &&
+                                              (defaultTargetPlatform ==
+                                                      TargetPlatform.android ||
+                                                  defaultTargetPlatform ==
+                                                      TargetPlatform.iOS)))
+                                      ? null
+                                      : IconButton(
+                                          icon: Icon(
+                                            Icons.delete,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () async {
+                                            final String habitTitle =
+                                                habit.title;
+                                            await habit.delete();
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Item "$habitTitle" deleted',
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
                                 ),
                               ),
                             )
@@ -150,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: OpenContainer(
-        transitionDuration: Duration(milliseconds: 450),
+        transitionDuration: Duration(milliseconds: 300),
         closedShape: const RoundedRectangleBorder(),
         closedColor: Colors.transparent,
         closedElevation: 0,
@@ -165,33 +209,32 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         openBuilder: (context, closeContainer) {
           return AlertDialog(
-              title: Text('Add New Habit'),
-              content: TextField(
-                controller: _habitController,
-                autofocus: true,
-                decoration: InputDecoration(hintText: 'Enter habit name'),
+            title: Text('Add New Habit'),
+            content: TextField(
+              controller: _habitController,
+              autofocus: true,
+              decoration: InputDecoration(hintText: 'Enter habit name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  closeContainer();
+                  _habitController.clear();
+                },
+                child: Text('Cancel'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    closeContainer();
-                    _habitController.clear();
-                  },
-                  child: Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final text = _habitController.text.trim();
-                    if (text.isNotEmpty) {
-                      _habitBox.add(Habit(title: text));
-                    }
-                    closeContainer();
-                    _habitController.clear();
-                  },
-                  child: Text('Add'),
-                ),
-              ],
-            
+              TextButton(
+                onPressed: () {
+                  final text = _habitController.text.trim();
+                  if (text.isNotEmpty) {
+                    _habitBox.add(Habit(title: text));
+                  }
+                  closeContainer();
+                  _habitController.clear();
+                },
+                child: Text('Add'),
+              ),
+            ],
           );
         },
       ),
@@ -216,6 +259,44 @@ class _HomeScreenState extends State<HomeScreen> {
         onThemeColorChanged: widget.onThemeColorChanged,
         onDarkModeChanged: widget.onDarkModeChanged,
       ),
+    );
+  }
+
+  Future<String> _getRandomAffirmation() async {
+    final String jsonString = await DefaultAssetBundle.of(
+      context,
+    ).loadString('assets/data/affirmations.json');
+    final List<String> affirmations =
+        (json.decode(jsonString) as Map<String, dynamic>)['affirmations']!
+            .cast<String>();
+    affirmations.shuffle();
+    return affirmations.isNotEmpty
+        ? affirmations.first
+        : 'You are doing great!';
+  }
+
+  Widget _getAffirmationDialog(void Function() closeContainer) {
+    return AlertDialog(
+      title: Text(
+        'Affirmation for you! 😃',
+        style: TextStyle(fontWeight: FontWeight.w100),
+      ),
+      content: FutureBuilder<String>(
+        future: _getRandomAffirmation(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return LinearProgressIndicator();
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            return Text(
+              snapshot.data ?? 'You are doing great! 💪',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            );
+          }
+        },
+      ),
+      actions: [TextButton(onPressed: closeContainer, child: Text('Close'))],
     );
   }
 }
