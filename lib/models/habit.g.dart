@@ -18,18 +18,21 @@ class HabitAdapter extends TypeAdapter<Habit> {
     };
     return Habit(
       title: fields[0] as String,
-      done: (fields[1] ?? false) as bool,
+      done: fields[1] as bool,
+      dueDateTime: fields[2] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Habit obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
-      ..write(obj.done);
+      ..write(obj.done)
+      ..writeByte(2)
+      ..write(obj.dueDateTime);
   }
 
   @override

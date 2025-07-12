@@ -10,5 +10,8 @@ class Habit extends HiveObject {
   @HiveField(1)
   bool done;
 
-  Habit({required this.title, this.done = false});
+  @HiveField(2)
+  DateTime? dueDateTime;
+
+  Habit({required this.title, this.done = false, this.dueDateTime});
 }

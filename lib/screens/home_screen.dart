@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:mental_buddy/models/habit.dart';
 import 'package:mental_buddy/widgets/drawer_menu.dart';
 
@@ -27,8 +28,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late Box<Habit> _habitBox;
   final TextEditingController _habitController = TextEditingController();
+  DateTime? _selectedDueDateTime;
   static final GlobalKey<ScaffoldState> _scaffoldKey =
       GlobalKey<ScaffoldState>();
+  static final _dueDateFormat = DateFormat('EEE, MMM d, yyyy h:mma');
+  static final _checkedItemTextColor = Colors.grey.withAlpha(
+    (0.75 * 255).toInt(),
+  );
 
   @override
   void initState() {
@@ -109,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             .map(
                               (habit) => Dismissible(
                                 key: ValueKey(habit.key),
-                                direction: DismissDirection.startToEnd,
+                                direction: DismissDirection.endToStart,
                                 background: Container(
                                   color: Colors.red,
                                   alignment: Alignment.centerRight,
@@ -139,12 +145,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ? TextDecoration.lineThrough
                                           : TextDecoration.none,
                                       color: habit.done
-                                          ? Colors.grey.withAlpha(
-                                              (0.75 * 255).toInt(),
-                                            )
+                                          ? _checkedItemTextColor
                                           : null,
                                     ),
                                   ),
+                                  subtitle: habit.dueDateTime != null
+                                      ? Builder(
+                                          builder: (context) {
+                                            final double? titleFontSize =
+                                                DefaultTextStyle.of(
+                                                  context,
+                                                ).style.fontSize;
+                                            final double subtitleFontSize =
+                                                (titleFontSize ?? 16) * 0.7;
+                                            return Text(
+                                              'Due: ${_dueDateFormat.format(habit.dueDateTime!)}',
+                                              style: TextStyle(
+                                                decoration: habit.done
+                                                    ? TextDecoration.lineThrough
+                                                    : TextDecoration.none,
+                                                color: habit.done
+                                                    ? _checkedItemTextColor
+                                                    : null,
+                                                fontSize: subtitleFontSize,
+                                              ),
+                                            );
+                                          },
+                                        )
+                                      : null,
                                   selected: habit.done,
                                   onChanged: (value) {
                                     habit.done = value ?? false;
@@ -203,38 +231,98 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionType: ContainerTransitionType.fadeThrough,
         closedBuilder: (context, openContainer) {
           return FloatingActionButton(
-            onPressed: openContainer,
+            onPressed: () {
+              _selectedDueDateTime = null; // Reset on open
+              openContainer();
+            },
             child: Icon(Icons.add),
           );
         },
         openBuilder: (context, closeContainer) {
-          return AlertDialog(
-            title: Text('Add New Habit'),
-            content: TextField(
-              controller: _habitController,
-              autofocus: true,
-              decoration: InputDecoration(hintText: 'Enter habit name'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  closeContainer();
-                  _habitController.clear();
-                },
-                child: Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final text = _habitController.text.trim();
-                  if (text.isNotEmpty) {
-                    _habitBox.add(Habit(title: text));
-                  }
-                  closeContainer();
-                  _habitController.clear();
-                },
-                child: Text('Add'),
-              ),
-            ],
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: Text('Add New Habit'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _habitController,
+                      autofocus: true,
+                      decoration: InputDecoration(hintText: 'Enter habit name'),
+                    ),
+                    SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedDueDateTime == null
+                                ? 'No due date selected'
+                                : 'Due: '
+                                      '${_dueDateFormat.format(_selectedDueDateTime!)}',
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.calendar_today),
+                          onPressed: () async {
+                            final now = DateTime.now();
+                            final DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: now,
+                              firstDate: now,
+                              lastDate: DateTime(now.year + 5),
+                            );
+                            if (pickedDate != null) {
+                              final TimeOfDay? pickedTime =
+                                  await showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                  );
+                              if (pickedTime != null) {
+                                final DateTime combined = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                );
+                                setState(() {
+                                  _selectedDueDateTime = combined;
+                                });
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      closeContainer();
+                      _habitController.clear();
+                      _selectedDueDateTime = null;
+                    },
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final text = _habitController.text.trim();
+                      if (text.isNotEmpty) {
+                        _habitBox.add(
+                          Habit(title: text, dueDateTime: _selectedDueDateTime),
+                        );
+                      }
+                      closeContainer();
+                      _habitController.clear();
+                      _selectedDueDateTime = null;
+                    },
+                    child: Text('Add'),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
