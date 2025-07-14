@@ -157,18 +157,51 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   context,
                                                 ).style.fontSize;
                                             final double subtitleFontSize =
-                                                (titleFontSize ?? 16) * 0.7;
-                                            return Text(
-                                              'Due: ${_dueDateFormat.format(habit.dueDateTime!)}',
-                                              style: TextStyle(
-                                                decoration: habit.done
-                                                    ? TextDecoration.lineThrough
-                                                    : TextDecoration.none,
-                                                color: habit.done
-                                                    ? _checkedItemTextColor
-                                                    : null,
-                                                fontSize: subtitleFontSize,
-                                              ),
+                                                (titleFontSize ?? 16) * 0.6;
+                                            // return Text(
+                                            //   'Due: ${_dueDateFormat.format(habit.dueDateTime!)}',
+                                            //   style: TextStyle(
+                                            //     decoration: habit.done
+                                            //         ? TextDecoration.lineThrough
+                                            //         : TextDecoration.none,
+                                            //     color:
+                                            //         habit.dueDateTime!.isBefore(
+                                            //           DateTime.now(),
+                                            //         )
+                                            //         ? Colors.redAccent
+                                            //         : Colors.greenAccent,
+                                            //     fontSize: subtitleFontSize,
+                                            //   ),
+                                            // );
+                                            return Row(
+                                              children: [
+                                                Chip(
+                                                  label: Text(
+                                                    _dueDateFormat.format(
+                                                      habit.dueDateTime!,
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          subtitleFontSize,
+                                                      color:
+                                                          habit.dueDateTime!
+                                                              .isBefore(
+                                                                DateTime.now(),
+                                                              )
+                                                          ? Colors.redAccent
+                                                          : Colors.greenAccent,
+                                                    ),
+                                                  ),
+                                                  // avatar: Icon(Icons.alarm),
+                                                  shadowColor:
+                                                      habit.dueDateTime!
+                                                          .isBefore(
+                                                            DateTime.now(),
+                                                          )
+                                                      ? Colors.redAccent
+                                                      : Colors.greenAccent,
+                                                ),
+                                              ],
                                             );
                                           },
                                         )
