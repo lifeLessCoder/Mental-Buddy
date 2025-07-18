@@ -158,21 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ).style.fontSize;
                                             final double subtitleFontSize =
                                                 (titleFontSize ?? 16) * 0.6;
-                                            // return Text(
-                                            //   'Due: ${_dueDateFormat.format(habit.dueDateTime!)}',
-                                            //   style: TextStyle(
-                                            //     decoration: habit.done
-                                            //         ? TextDecoration.lineThrough
-                                            //         : TextDecoration.none,
-                                            //     color:
-                                            //         habit.dueDateTime!.isBefore(
-                                            //           DateTime.now(),
-                                            //         )
-                                            //         ? Colors.redAccent
-                                            //         : Colors.greenAccent,
-                                            //     fontSize: subtitleFontSize,
-                                            //   ),
-                                            // );
                                             return Row(
                                               children: [
                                                 Chip(
