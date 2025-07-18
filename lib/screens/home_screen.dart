@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:mental_buddy/models/habit.dart';
 import 'package:mental_buddy/widgets/drawer_menu.dart';
+import 'package:mental_buddy/screens/journey_path_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -358,6 +359,17 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             IconButton(icon: Icon(Icons.search), onPressed: () {}),
+            IconButton(
+              icon: Icon(Icons.route),
+              tooltip: 'Journey',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => JourneyPathView(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
